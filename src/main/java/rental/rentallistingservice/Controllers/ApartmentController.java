@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import rental.rentallistingservice.Model.Apartment;
 import rental.rentallistingservice.Services.ApartmentService;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -25,4 +26,18 @@ public class ApartmentController {
         List<Apartment> apartments = apartmentService.getAll();
         return ResponseEntity.ok(apartments);
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Apartment>> searchApartments(
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) Integer minRooms,
+            @RequestParam(required = false) String rentalType,
+            @RequestParam(required = false) Boolean available
+    ) {
+        List<Apartment> results = apartmentService.search(minPrice, maxPrice, location, minRooms, rentalType, available);
+        return ResponseEntity.ok(results);
+    }
+
 }
