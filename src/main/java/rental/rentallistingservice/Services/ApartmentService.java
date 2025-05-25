@@ -11,8 +11,13 @@ import java.util.stream.Collectors;
 
 @Service
 public class ApartmentService {
+
+    private final ApartmentRepository apartmentRepository;
+
     @Autowired
-    private ApartmentRepository apartmentRepository;
+    public ApartmentService(ApartmentRepository apartmentRepository) {
+        this.apartmentRepository = apartmentRepository;
+    }
 
     public Apartment save(Apartment apartment) {
         return apartmentRepository.save(apartment);
@@ -23,8 +28,15 @@ public class ApartmentService {
     }
 
     public List<Apartment> search(BigDecimal minPrice, BigDecimal maxPrice, String location,
-                                  Integer minRooms, String rentalType, Boolean available) {
-        return apartmentRepository.findAll().stream()
+                                  Integer minRooms, String rentalType, Boolean available, Double latitude,
+                                  Double longitude, Double radius) {
+        List<Apartment> apartments;
+        if (latitude != null && longitude != null && radius != null) {
+            apartments = apartmentRepository.findApartmentsWithinRadius(latitude, longitude, radius);
+        } else {
+            apartments = apartmentRepository.findAll();
+        }
+        return apartments.stream()
                 .filter(a -> minPrice == null || a.getPrice().compareTo(minPrice) >= 0)
                 .filter(a -> maxPrice == null || a.getPrice().compareTo(maxPrice) <= 0)
                 .filter(a -> location == null || a.getLocation().toLowerCase().contains(location.toLowerCase()))

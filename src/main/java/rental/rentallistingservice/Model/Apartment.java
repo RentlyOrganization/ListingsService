@@ -1,6 +1,7 @@
 package rental.rentallistingservice.Model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
@@ -21,10 +22,14 @@ public class Apartment {
     private Long id;
     @Positive
     private BigDecimal price;
-    private double latitude;
-    private double longitude;
+    @Min(-90)
+    @Max(90)
+    private Double latitude;
+    @Min(-180)
+    @Max(180)
+    private Double longitude;
     @NotBlank
-    private String Location;
+    private String location;
     @Min(1)
     private int rooms;
     @Enumerated(EnumType.STRING)

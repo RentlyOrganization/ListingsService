@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Apartment Search</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .filter-group label {
+            margin-bottom: 5px;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .apartment-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Apartment Search</h1>
+
+    <div id="map"></div>
+
+    <form id="searchForm" class="filters">
+        <div class="filter-group">
+            <label for="minPrice">Min Price:</label>
+            <input type="number" id="minPrice" name="minPrice">
+        </div>
+
+        <div class="filter-group">
+            <label for="maxPrice">Max Price:</label>
+            <input type="number" id="maxPrice" name="maxPrice">
+        </div>
+
+        <div class="filter-group">
+            <label for="location">Location:</label>
+            <input type="text" id="location" name="location">
+        </div>
+
+        <div class="filter-group">
+            <label for="minRooms">Min Rooms:</label>
+            <input type="number" id="minRooms" name="minRooms" min="1">
+        </div>
+
+        <div class="filter-group">
+            <label for="rentalType">Rental Type:</label>
+            <select id="rentalType" name="rentalType">
+                <option value="">Any</option>
+                <option value="LONG_TERM">Long Term</option>
+                <option value="SHORT_TERM">Short Term</option>
+                <option value="DAILY">Daily</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="available">Available:</label>
+            <select id="available" name="available">
+                <option value="">Any</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="radius">Search Radius (km):</label>
+            <input type="number" id="radius" name="radius" min="1" max="100" value="5">
+        </div>
+
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <button type="submit">Search</button>
+        </div>
+    </form>
+
+    <div id="results" class="results"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const map = L.map('map').setView([52.2297, 21.0122], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = null;
+    let searchCircle = null;
+
+    map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        if (marker) {
+            map.removeLayer(marker);
+        }
+        marker = L.marker([lat, lng]).addTo(map);
+
+        const radius = document.getElementById('radius').value * 1000;
+        if (searchCircle) {
+            map.removeLayer(searchCircle);
+        }
+        searchCircle = L.circle([lat, lng], {
+            radius: radius,
+            color: 'red',
+            fillColor: '#f03',
+            fillOpacity: 0.2
+        }).addTo(map);
+    });
+
+    document.getElementById('searchForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        if (!marker) {
+            alert('Please select a location on the map first!');
+            return;
+        }
+
+        const formData = new FormData(this);
+        const params = new URLSearchParams();
+
+        for (let [key, value] of formData.entries()) {
+            if (value) {
+                params.append(key, value);
+            }
+        }
+
+        params.append('latitude', marker.getLatLng().lat);
+        params.append('longitude', marker.getLatLng().lng);
+
+        try {
+            const response = await fetch(`/api/apartments/search?${params.toString()}`);
+            const apartments = await response.json();
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            if (apartments.length === 0) {
+                resultsDiv.innerHTML = '<p>No apartments found matching your criteria.</p>';
+                return;
+            }
+
+            apartments.forEach(apt => {
+                const card = document.createElement('div');
+                card.className = 'apartment-card';
+                card.innerHTML = `
+                        <h3>${apt.location}</h3>
+                        <p>Price: ${apt.price}</p>
+                        <p>Rooms: ${apt.rooms}</p>
+                        <p>Type: ${apt.rentalType}</p>
+                        <p>Available: ${apt.available ? 'Yes' : 'No'}</p>
+                    `;
+                resultsDiv.appendChild(card);
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error searching for apartments');
+        }
+    });
+
+    document.getElementById('radius').addEventListener('change', function(e) {
+        if (marker && searchCircle) {
+            const radius = e.target.value * 1000;
+            searchCircle.setRadius(radius);
+        }
+    });
+</script>
+</body>
+</html>

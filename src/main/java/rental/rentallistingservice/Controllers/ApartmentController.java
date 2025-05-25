@@ -34,9 +34,13 @@ public class ApartmentController {
             @RequestParam(required = false) String location,
             @RequestParam(required = false) Integer minRooms,
             @RequestParam(required = false) String rentalType,
-            @RequestParam(required = false) Boolean available
+            @RequestParam(required = false) Boolean available,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude,
+            @RequestParam(required = false) Double radius
     ) {
-        List<Apartment> results = apartmentService.search(minPrice, maxPrice, location, minRooms, rentalType, available);
+        List<Apartment> results = apartmentService.search(minPrice, maxPrice, location, minRooms, rentalType, available,
+                latitude, longitude, radius);
         return ResponseEntity.ok(results);
     }
 
