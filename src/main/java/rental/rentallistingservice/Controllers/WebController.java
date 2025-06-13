@@ -19,6 +19,6 @@ public class WebController {
     })
     @GetMapping("/")
     public String home() {
-        return "index.html";
+        return "redirect:/index.html";
     }
 }

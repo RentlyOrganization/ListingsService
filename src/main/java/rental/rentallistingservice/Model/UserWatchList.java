@@ -19,7 +19,7 @@ public class UserWatchList {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String userId;
+    private Long userId;
 
     @ElementCollection
     @CollectionTable(name = "watched_apartments", joinColumns = @JoinColumn(name = "watchlist_id"))

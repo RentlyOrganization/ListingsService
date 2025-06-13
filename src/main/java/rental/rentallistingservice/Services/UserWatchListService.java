@@ -17,13 +17,13 @@ public class UserWatchListService {
         this.userWatchlistRepository = userWatchlistRepository;
     }
 
-    public List<Long> getWatchedApartmentIds(String userId) {
+    public List<Long> getWatchedApartmentIds(Long userId) {
         return userWatchlistRepository.findByUserId(userId)
                 .map(UserWatchList::getWatchedApartmentIds)
                 .orElse(List.of());
     }
 
-    public void addToWatchlist(String userId, Long apartmentId) {
+    public void addToWatchlist(Long userId, Long apartmentId) {
         UserWatchList watchlist = userWatchlistRepository.findByUserId(userId)
                 .orElse(new UserWatchList());
 
@@ -37,14 +37,14 @@ public class UserWatchListService {
         }
     }
 
-    public void removeFromWatchlist(String userId, Long apartmentId) {
+    public void removeFromWatchlist(Long userId, Long apartmentId) {
         userWatchlistRepository.findByUserId(userId).ifPresent(watchlist -> {
             watchlist.getWatchedApartmentIds().remove(apartmentId);
             userWatchlistRepository.save(watchlist);
         });
     }
 
-    public boolean isWatched(String userId, Long apartmentId) {
+    public boolean isWatched(Long userId, Long apartmentId) {
         return userWatchlistRepository.findByUserId(userId)
                 .map(watchlist -> watchlist.getWatchedApartmentIds().contains(apartmentId))
                 .orElse(false);

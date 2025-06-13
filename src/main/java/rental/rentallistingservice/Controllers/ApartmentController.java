@@ -2,13 +2,10 @@ package rental.rentallistingservice.Controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import rental.rentallistingservice.Exceptions.*;
@@ -25,8 +22,13 @@ import java.util.Set;
 @Tag(name = "Apartment Controller", description = "Kontroler zarządzający ofertami mieszkań")
 
 public class ApartmentController {
+
+    private final ApartmentService apartmentService;
+
     @Autowired
-    private ApartmentService apartmentService;
+    public ApartmentController(ApartmentService apartmentService) {
+        this.apartmentService = apartmentService;
+    }
 
     @Operation(summary = "Dodaj mieszkanie",
             description = "Dodaje nową ofertę mieszkania do systemu")
@@ -49,7 +51,13 @@ public class ApartmentController {
             @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
     })
     @GetMapping
-    public ResponseEntity<List<Apartment>> getAllApartments() {
+    public ResponseEntity<List<Apartment>> getAllApartments(
+            @RequestParam Map<String, String> allParams
+    ) {
+        if (!allParams.isEmpty()) {
+            throw new InvalidParameterException("Endpoint nie przyjmuje żadnych parametrów zapytania");
+        }
+
         List<Apartment> apartments = apartmentService.getAll();
         return ResponseEntity.ok(apartments);
     }

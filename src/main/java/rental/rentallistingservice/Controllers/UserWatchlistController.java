@@ -2,13 +2,10 @@ package rental.rentallistingservice.Controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -20,9 +17,14 @@ import java.util.List;
 @Controller
 @RequestMapping("/api/watchlist")
 @Tag(name = "Watchlist Controller", description = "Kontroler zarządzający listą obserwowanych mieszkań")
-public class UserWatchListController {
+public class UserWatchlistController {
+
+    private final UserWatchListService userWatchlistService;
+
     @Autowired
-    private UserWatchListService userWatchlistService;
+    public UserWatchlistController(UserWatchListService userWatchlistService) {
+        this.userWatchlistService = userWatchlistService;
+    }
 
     @Operation(summary = "Pobierz listę obserwowanych",
             description = "Zwraca listę ID mieszkań obserwowanych przez użytkownika")
@@ -33,7 +35,7 @@ public class UserWatchListController {
     })
     @GetMapping
     public ResponseEntity<List<Long>> getWatchedApartments(
-            @Parameter(description = "ID użytkownika") @RequestParam String userId) {
+            @Parameter(description = "ID użytkownika") @RequestParam Long userId) {
         validateUserId(userId);
         return ResponseEntity.ok(userWatchlistService.getWatchedApartmentIds(userId));
     }
@@ -49,7 +51,7 @@ public class UserWatchListController {
     @PostMapping("/{apartmentId}")
     public ResponseEntity<Void> addToWatchlist(
             @Parameter(description = "ID mieszkania") @PathVariable Long apartmentId,
-            @Parameter(description = "ID użytkownika") @RequestParam String userId) {
+            @Parameter(description = "ID użytkownika") @RequestParam Long userId) {
         userWatchlistService.addToWatchlist(userId, apartmentId);
         validateApartmentId(apartmentId);
         validateUserId(userId);
@@ -66,7 +68,7 @@ public class UserWatchListController {
     @DeleteMapping("/{apartmentId}")
     public ResponseEntity<Void> removeFromWatchlist(
             @Parameter(description = "ID mieszkania") @PathVariable Long apartmentId,
-            @Parameter(description = "ID użytkownika") @RequestParam String userId) {
+            @Parameter(description = "ID użytkownika") @RequestParam Long userId) {
         validateApartmentId(apartmentId);
         validateUserId(userId);
         userWatchlistService.removeFromWatchlist(userId, apartmentId);
@@ -83,21 +85,24 @@ public class UserWatchListController {
     @GetMapping("/check/{apartmentId}")
     public ResponseEntity<Boolean> isWatched(
             @Parameter(description = "ID mieszkania") @PathVariable Long apartmentId,
-            @Parameter(description = "ID użytkownika") @RequestParam String userId) {
+            @Parameter(description = "ID użytkownika") @RequestParam Long userId) {
         validateApartmentId(apartmentId);
         validateUserId(userId);
         return ResponseEntity.ok(userWatchlistService.isWatched(userId, apartmentId));
     }
 
     private void validateApartmentId(Long apartmentId) {
-        if (apartmentId == null || apartmentId <= 0) {
+        if (apartmentId <= 0) {
             throw new InvalidApartmentIdException("ID mieszkania musi być dodatnie");
         }
     }
 
-    private void validateUserId(String userId) {
-        if (userId == null || userId.trim().isEmpty()) {
+    private void validateUserId(Long userId) {
+        if (userId == null) {
             throw new InvalidUserIdException("ID użytkownika nie może być puste");
+        }
+        if (userId <= 0) {
+            throw new InvalidUserIdException("ID użytkownika musi być dodatnie");
         }
     }
 }

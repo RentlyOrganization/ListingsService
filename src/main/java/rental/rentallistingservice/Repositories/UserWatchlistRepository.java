@@ -8,5 +8,5 @@ import java.util.Optional;
 
 @Repository
 public interface UserWatchlistRepository extends JpaRepository<UserWatchList, Long> {
-    Optional<UserWatchList> findByUserId(String userId);
+    Optional<UserWatchList> findByUserId(Long userId);
 }
