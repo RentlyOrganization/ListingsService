@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: Rental-listing-service
+  cloud:
+    config:
+      enabled: false
+  datasource:
+    url: jdbc:postgresql://localhost:5432/Listings
+    username: postgres
+    password: haslo
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  web:
+    resources:
+      static-locations: classpath:/static/
+  mvc:
+    static-path-pattern: /**
+
+server:
+  port: 8080
+
+eureka:
+  client:
+    enabled: false
+
+# Konfiguracja swaggera
+# - UI Swaggera: http://localhost:8080/swagger-ui.html
+# - JSON OpenAPI: http://localhost:8080/api-doc
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
