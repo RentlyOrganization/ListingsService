@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.ws.rs.InternalServerErrorException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +20,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/apartments")
@@ -134,6 +132,26 @@ public class ApartmentController {
                 .map(apartmentMapper::toResponseDTO)
                 .toList();
         return ResponseEntity.ok(dtos);
+    }
+
+    @Operation(summary = "Pobierz mieszkanie",
+            description = "Zwraca szczegóły mieszkania o podanym ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pomyślnie pobrano mieszkanie"),
+            @ApiResponse(responseCode = "404", description = "Nie znaleziono mieszkania"),
+            @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
+    })
+    @GetMapping("/{id}")
+    public ResponseEntity<ApartmentResponseDTO> getApartmentById(
+            @Parameter(description = "ID mieszkania") @PathVariable Long id) {
+        if (id == null || id <= 0) {
+            throw new InvalidParameterException("ID mieszkania musi być większe od zera");
+        }
+        Apartment apartment = apartmentService.getAll().stream()
+                .filter(a -> a.getId().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new ApartmentNotFoundException("Mieszkanie o ID " + id + " nie zostało znalezione"));
+        return ResponseEntity.ok(apartmentMapper.toResponseDTO(apartment));
     }
 
     private void validatePriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
