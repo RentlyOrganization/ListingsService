@@ -97,6 +97,7 @@ public class UserWatchlistController {
         }
     }
 
+
     private void validateUserId(Long userId) {
         if (userId == null) {
             throw new InvalidUserIdException("ID użytkownika nie może być puste");

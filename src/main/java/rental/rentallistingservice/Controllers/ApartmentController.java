@@ -5,10 +5,15 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.ws.rs.InternalServerErrorException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import rental.rentallistingservice.DTO.ApartmentResponseDTO;
+import rental.rentallistingservice.DTO.CreateApartmentDTO;
 import rental.rentallistingservice.Exceptions.*;
+import rental.rentallistingservice.Mapper.ApartmentMapper;
 import rental.rentallistingservice.Model.Apartment;
 import rental.rentallistingservice.Services.ApartmentService;
 
@@ -16,6 +21,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/apartments")
@@ -23,11 +29,18 @@ import java.util.Set;
 
 public class ApartmentController {
 
+    private static final Set<String> ALLOWED_SEARCH_PARAMS = Set.of(
+            "minPrice", "maxPrice", "location", "minRooms",
+            "rentalType", "available", "latitude", "longitude", "radius"
+    );
+
     private final ApartmentService apartmentService;
+    private final ApartmentMapper apartmentMapper;
 
     @Autowired
-    public ApartmentController(ApartmentService apartmentService) {
+    public ApartmentController(ApartmentService apartmentService, ApartmentMapper apartmentMapper) {
         this.apartmentService = apartmentService;
+        this.apartmentMapper= apartmentMapper;
     }
 
     @Operation(summary = "Dodaj mieszkanie",
@@ -38,10 +51,26 @@ public class ApartmentController {
             @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
     })
     @PostMapping
-    public ResponseEntity<Apartment> addApartment(
-            @Parameter(description = "Dane mieszkania") @RequestBody Apartment apartment) {
+    public ResponseEntity<ApartmentResponseDTO> addApartment(
+            @Parameter(description = "Dane mieszkania") @Valid @RequestBody CreateApartmentDTO apartmentDto) {
+
+        if (apartmentDto == null) {
+            throw new InvalidParameterException("Dane mieszkania nie mogą być puste");
+        }
+
+        if (apartmentDto.getPrice() == null || apartmentDto.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidPriceRangeException("Cena mieszkania musi być większa od zera");
+        }
+
+        validateRoomsNumber(apartmentDto.getRooms());
+        validateRentalType(apartmentDto.getRentalType());
+        validateLocation(apartmentDto.getLocation());
+        validateCoordinates(apartmentDto.getLatitude(), apartmentDto.getLongitude());
+
+        Apartment apartment = apartmentMapper.toEntity(apartmentDto);
         Apartment savedApartment = apartmentService.save(apartment);
-        return ResponseEntity.ok(savedApartment);
+        return ResponseEntity.ok(apartmentMapper.toResponseDTO(savedApartment));
+
     }
 
     @Operation(summary = "Pobierz wszystkie mieszkania",
@@ -51,7 +80,7 @@ public class ApartmentController {
             @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
     })
     @GetMapping
-    public ResponseEntity<List<Apartment>> getAllApartments(
+    public ResponseEntity<List<ApartmentResponseDTO>> getAllApartments(
             @RequestParam Map<String, String> allParams
     ) {
         if (!allParams.isEmpty()) {
@@ -59,7 +88,10 @@ public class ApartmentController {
         }
 
         List<Apartment> apartments = apartmentService.getAll();
-        return ResponseEntity.ok(apartments);
+        List<ApartmentResponseDTO> apartmentDTOs = apartments.stream()
+                .map(apartmentMapper::toResponseDTO)
+                .toList();
+        return ResponseEntity.ok(apartmentDTOs);
     }
 
     @Operation(summary = "Wyszukaj mieszkania",
@@ -70,7 +102,8 @@ public class ApartmentController {
             @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
     })
     @GetMapping("/search")
-    public ResponseEntity<List<Apartment>> searchApartments(
+    public ResponseEntity<List<ApartmentResponseDTO>> searchApartments(
+            @RequestParam Map<String, String> allParams,
             @Parameter(description = "Minimalna cena") @RequestParam(required = false) BigDecimal minPrice,
             @Parameter(description = "Maksymalna cena") @RequestParam(required = false) BigDecimal maxPrice,
             @Parameter(description = "Lokalizacja") @RequestParam(required = false) String location,
@@ -79,15 +112,11 @@ public class ApartmentController {
             @Parameter(description = "Dostępność") @RequestParam(required = false) Boolean available,
             @Parameter(description = "Szerokość geograficzna") @RequestParam(required = false) Double latitude,
             @Parameter(description = "Długość geograficzna") @RequestParam(required = false) Double longitude,
-            @Parameter(description = "Promień wyszukiwania (km)") @RequestParam(required = false) Double radius,
-                    @RequestParam Map<String, String> allParams
+            @Parameter(description = "Promień wyszukiwania (km)") @RequestParam(required = false) Double radius
 
     )  {
-        Set<String> allowedParams = Set.of("minPrice", "maxPrice", "location", "minRooms",
-                "rentalType", "available", "latitude", "longitude", "radius");
-
         for (String param : allParams.keySet()) {
-            if (!allowedParams.contains(param)) {
+            if (!ALLOWED_SEARCH_PARAMS.contains(param)) {
                 throw new InvalidParameterException("Niedozwolony parametr: " + param);
             }
         }
@@ -101,7 +130,10 @@ public class ApartmentController {
         validateSearchParameters(latitude, longitude, radius);
         List<Apartment> results = apartmentService.search(minPrice, maxPrice, location, minRooms, rentalType, available,
                 latitude, longitude, radius);
-        return ResponseEntity.ok(results);
+        List<ApartmentResponseDTO> dtos = results.stream()
+                .map(apartmentMapper::toResponseDTO)
+                .toList();
+        return ResponseEntity.ok(dtos);
     }
 
     private void validatePriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
