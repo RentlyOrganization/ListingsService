@@ -20,4 +20,7 @@ public class ApartmentResponseDTO {
     private Boolean available;
     private Double latitude;
     private Double longitude;
+    private Long ownerId;
+    private String ownerName;
+
 }

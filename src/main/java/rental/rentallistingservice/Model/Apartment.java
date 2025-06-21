@@ -35,4 +35,7 @@ public class Apartment {
     @Enumerated(EnumType.STRING)
     private RentalType rentalType;
     private boolean available;
+    @Column(name = "owner_id")
+    private Long ownerId;
+
 }

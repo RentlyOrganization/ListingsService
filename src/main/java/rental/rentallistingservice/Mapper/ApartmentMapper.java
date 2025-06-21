@@ -1,6 +1,7 @@
 package rental.rentallistingservice.Mapper;
 
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import rental.rentallistingservice.DTO.ApartmentResponseDTO;
 import rental.rentallistingservice.DTO.CreateApartmentDTO;
 import rental.rentallistingservice.Model.Apartment;
@@ -9,5 +10,7 @@ import rental.rentallistingservice.Model.Apartment;
 public interface ApartmentMapper {
     Apartment toEntity(CreateApartmentDTO dto);
     CreateApartmentDTO toDto(Apartment apartment);
+    @Mapping(target = "ownerId", source = "ownerId")
+    @Mapping(target = "ownerName", ignore = true)
     ApartmentResponseDTO toResponseDTO(Apartment entity);
 }

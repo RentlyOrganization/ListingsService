@@ -11,10 +11,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import rental.rentallistingservice.DTO.ApartmentResponseDTO;
 import rental.rentallistingservice.DTO.CreateApartmentDTO;
+import rental.rentallistingservice.DTO.UserDTO;
 import rental.rentallistingservice.Exceptions.*;
 import rental.rentallistingservice.Mapper.ApartmentMapper;
 import rental.rentallistingservice.Model.Apartment;
 import rental.rentallistingservice.Services.ApartmentService;
+import rental.rentallistingservice.microservices.UserOwner;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -32,13 +34,15 @@ public class ApartmentController {
             "rentalType", "available", "latitude", "longitude", "radius"
     );
 
+    private final UserOwner userOwner;
     private final ApartmentService apartmentService;
     private final ApartmentMapper apartmentMapper;
 
     @Autowired
-    public ApartmentController(ApartmentService apartmentService, ApartmentMapper apartmentMapper) {
+    public ApartmentController(UserOwner userOwner, ApartmentService apartmentService, ApartmentMapper apartmentMapper) {
         this.apartmentService = apartmentService;
         this.apartmentMapper= apartmentMapper;
+        this.userOwner = userOwner;
     }
 
     @Operation(summary = "Dodaj mieszkanie",
@@ -46,6 +50,7 @@ public class ApartmentController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Pomyślnie dodano mieszkanie"),
             @ApiResponse(responseCode = "400", description = "Nieprawidłowe dane mieszkania"),
+            @ApiResponse(responseCode = "404", description = "Nie znaleziono użytkownika"),
             @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
     })
     @PostMapping
@@ -60,6 +65,8 @@ public class ApartmentController {
             throw new InvalidPriceRangeException("Cena mieszkania musi być większa od zera");
         }
 
+        validateOwner(apartmentDto.getOwnerId());
+
         validateRoomsNumber(apartmentDto.getRooms());
         validateRentalType(apartmentDto.getRentalType());
         validateLocation(apartmentDto.getLocation());
@@ -67,7 +74,7 @@ public class ApartmentController {
 
         Apartment apartment = apartmentMapper.toEntity(apartmentDto);
         Apartment savedApartment = apartmentService.save(apartment);
-        return ResponseEntity.ok(apartmentMapper.toResponseDTO(savedApartment));
+        return ResponseEntity.ok(mapToResponseDTOWithOwner(savedApartment));
 
     }
 
@@ -87,7 +94,7 @@ public class ApartmentController {
 
         List<Apartment> apartments = apartmentService.getAll();
         List<ApartmentResponseDTO> apartmentDTOs = apartments.stream()
-                .map(apartmentMapper::toResponseDTO)
+                .map(this::mapToResponseDTOWithOwner)
                 .toList();
         return ResponseEntity.ok(apartmentDTOs);
     }
@@ -154,6 +161,18 @@ public class ApartmentController {
         return ResponseEntity.ok(apartmentMapper.toResponseDTO(apartment));
     }
 
+    private void validateOwner(Long ownerId) {
+        try {
+            UserDTO user = userOwner.getUserById(ownerId);
+            if (user == null) {
+                throw new InvalidParameterException("Nie znaleziono użytkownika o ID: " + ownerId);
+            }
+        } catch (Exception e) {
+            throw new InvalidParameterException("Błąd podczas weryfikacji użytkownika: " + e.getMessage());
+        }
+    }
+
+
     private void validatePriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
         if (minPrice != null && minPrice.compareTo(BigDecimal.ZERO) < 0) {
             throw new InvalidPriceRangeException("Minimalna cena nie może być ujemna");
@@ -207,5 +226,23 @@ public class ApartmentController {
             throw new InvalidCoordinatesException("Promień wyszukiwania wymaga podania współrzędnych geograficznych");
         }
     }
+
+    private ApartmentResponseDTO mapToResponseDTOWithOwner(Apartment apartment) {
+        ApartmentResponseDTO dto = apartmentMapper.toResponseDTO(apartment);
+
+        try {
+            UserDTO owner = userOwner.getUserById(apartment.getOwnerId());
+            if (owner != null) {
+                dto.setOwnerId(owner.getId());
+                dto.setOwnerName(owner.getFirstName());
+            }
+        } catch (Exception e) {
+            dto.setOwnerId(apartment.getOwnerId());
+            dto.setOwnerName("Nieznany");
+        }
+
+        return dto;
+    }
+
 
 }

@@ -40,4 +40,8 @@ public class CreateApartmentDTO {
     @DecimalMin(value = "-180", message = "Długość geograficzna musi być większa lub równa -180")
     @DecimalMax(value = "180", message = "Długość geograficzna musi być mniejsza lub równa 180")
     private Double longitude;
+
+    @NotNull(message = "Id właściciela jest wymagane")
+    @Schema(description = "Id właściciela mieszkania")
+    private Long ownerId;
 }
