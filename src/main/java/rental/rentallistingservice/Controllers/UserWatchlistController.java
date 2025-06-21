@@ -9,8 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import rental.rentallistingservice.DTO.UserDTO;
 import rental.rentallistingservice.Exceptions.*;
 import rental.rentallistingservice.Services.UserWatchListService;
+import rental.rentallistingservice.microservices.UserOwner;
 
 import java.util.List;
 
@@ -20,10 +22,12 @@ import java.util.List;
 public class UserWatchlistController {
 
     private final UserWatchListService userWatchlistService;
+    private final UserOwner userOwner;
 
     @Autowired
-    public UserWatchlistController(UserWatchListService userWatchlistService) {
+    public UserWatchlistController(UserOwner userOwner, UserWatchListService userWatchlistService) {
         this.userWatchlistService = userWatchlistService;
+        this.userOwner = userOwner;
     }
 
     @Operation(summary = "Pobierz listę obserwowanych",
@@ -37,6 +41,7 @@ public class UserWatchlistController {
     public ResponseEntity<List<Long>> getWatchedApartments(
             @Parameter(description = "ID użytkownika") @RequestParam Long userId) {
         validateUserId(userId);
+        validateUserExists(userId);
         return ResponseEntity.ok(userWatchlistService.getWatchedApartmentIds(userId));
     }
 
@@ -55,6 +60,7 @@ public class UserWatchlistController {
         userWatchlistService.addToWatchlist(userId, apartmentId);
         validateApartmentId(apartmentId);
         validateUserId(userId);
+        validateUserExists(userId);
         return ResponseEntity.ok().build();
     }
 
@@ -71,6 +77,7 @@ public class UserWatchlistController {
             @Parameter(description = "ID użytkownika") @RequestParam Long userId) {
         validateApartmentId(apartmentId);
         validateUserId(userId);
+        validateUserExists(userId);
         userWatchlistService.removeFromWatchlist(userId, apartmentId);
         return ResponseEntity.ok().build();
     }
@@ -88,12 +95,27 @@ public class UserWatchlistController {
             @Parameter(description = "ID użytkownika") @RequestParam Long userId) {
         validateApartmentId(apartmentId);
         validateUserId(userId);
+        validateUserExists(userId);
         return ResponseEntity.ok(userWatchlistService.isWatched(userId, apartmentId));
     }
 
     private void validateApartmentId(Long apartmentId) {
         if (apartmentId <= 0) {
             throw new InvalidApartmentIdException("ID mieszkania musi być dodatnie");
+        }
+    }
+
+    private void validateUserExists(Long userId) {
+        try {
+            UserDTO user = userOwner.getUserById(userId);
+            if (user == null) {
+                throw new UserNotFoundException("Nie znaleziono użytkownika o ID: " + userId);
+            }
+        } catch (Exception e) {
+            if (e instanceof UserNotFoundException) {
+                throw e;
+            }
+            throw new UserNotFoundException("Błąd podczas weryfikacji użytkownika: " + e.getMessage());
         }
     }
 
