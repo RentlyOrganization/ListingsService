@@ -6,5 +6,3 @@ spring:
       enabled: true
   config:
     import: "configserver:http://host.docker.internal:8888"
-server:
-  port: 3002
