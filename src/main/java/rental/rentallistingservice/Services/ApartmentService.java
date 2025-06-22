@@ -50,7 +50,7 @@ public class ApartmentService {
 
     public Apartment addRating(Long apartmentId, BigDecimal rating) {
         Apartment apartment = apartmentRepository.findById(apartmentId)
-                .orElseThrow(() -> new RuntimeException("Apartment not found"));
+                .orElseThrow(() -> new RuntimeException("Nie znaleziono mieszkania o ID: " + apartmentId));
 
         apartment.setTotalRating(apartment.getTotalRating().add(rating));
 

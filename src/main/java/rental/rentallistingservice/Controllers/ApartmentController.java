@@ -217,8 +217,6 @@ public class ApartmentController {
         return ResponseEntity.ok(stats);
     }
 
-
-
     private void validateOwner(Long ownerId) {
         try {
             UserDTO user = userOwner.getUserById(ownerId);
