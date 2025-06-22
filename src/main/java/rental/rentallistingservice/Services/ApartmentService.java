@@ -67,6 +67,9 @@ public class ApartmentService {
         return apartmentRepository.save(apartment);
     }
 
-
+    public Apartment getApartmentById(Long apartmentId) {
+        return apartmentRepository.findById(apartmentId)
+                .orElseThrow(() -> new ApartmentNotFoundException("Mieszkanie o ID " + apartmentId + " nie zostało znalezione"));
+    }
 
 }

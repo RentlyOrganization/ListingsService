@@ -11,10 +11,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import rental.rentallistingservice.DTO.ApartmentResponseDTO;
 import rental.rentallistingservice.DTO.CreateApartmentDTO;
+import rental.rentallistingservice.DTO.UpdateApartmentDTO;
 import rental.rentallistingservice.DTO.UserDTO;
 import rental.rentallistingservice.Exceptions.*;
 import rental.rentallistingservice.Mapper.ApartmentMapper;
 import rental.rentallistingservice.Model.Apartment;
+import rental.rentallistingservice.Model.RentalType;
 import rental.rentallistingservice.Services.ApartmentService;
 import rental.rentallistingservice.microservices.UserOwner;
 
@@ -217,6 +219,41 @@ public class ApartmentController {
         return ResponseEntity.ok(stats);
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApartmentResponseDTO> updateApartment(
+            @PathVariable Long id,
+            @RequestBody UpdateApartmentDTO updateDto
+    ) {
+        if (id == null || id <= 0) {
+            throw new InvalidParameterException("ID mieszkania musi być większe od zera");
+        }
+
+        Apartment apartment = apartmentService.getAll().stream()
+                .filter(a -> a.getId().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new ApartmentNotFoundException("Mieszkanie o ID " + id + " nie zostało znalezione"));
+
+        if (updateDto.getOwnerId() != null) validateOwner(updateDto.getOwnerId());
+        if (updateDto.getRooms() != null) validateRoomsNumber(updateDto.getRooms());
+        if (updateDto.getRentalType() != null) validateRentalType(updateDto.getRentalType());
+        if (updateDto.getLocation() != null) validateLocation(updateDto.getLocation());
+        if (updateDto.getLatitude() != null || updateDto.getLongitude() != null)
+            validateCoordinates(updateDto.getLatitude(), updateDto.getLongitude());
+        if (updateDto.getPrice() != null) validatePrice(updateDto.getPrice());
+
+        if (updateDto.getPrice() != null) apartment.setPrice(updateDto.getPrice());
+        if (updateDto.getLocation() != null) apartment.setLocation(updateDto.getLocation());
+        if (updateDto.getRooms() != null) apartment.setRooms(updateDto.getRooms());
+        if (updateDto.getRentalType() != null) apartment.setRentalType(RentalType.valueOf(updateDto.getRentalType()));
+        if (updateDto.getAvailable() != null) apartment.setAvailable(updateDto.getAvailable());
+        if (updateDto.getLatitude() != null) apartment.setLatitude(updateDto.getLatitude());
+        if (updateDto.getLongitude() != null) apartment.setLongitude(updateDto.getLongitude());
+        if (updateDto.getOwnerId() != null) apartment.setOwnerId(updateDto.getOwnerId());
+
+        Apartment updated = apartmentService.save(apartment);
+        return ResponseEntity.ok(mapToResponseDTOWithOwner(updated));
+    }
+
     private void validateOwner(Long ownerId) {
         try {
             UserDTO user = userOwner.getUserById(ownerId);
@@ -228,6 +265,11 @@ public class ApartmentController {
         }
     }
 
+    private void validatePrice(BigDecimal price) {
+        if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidPriceRangeException("Cena mieszkania musi być większa od zera");
+        }
+    }
 
     private void validatePriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
         if (minPrice != null && minPrice.compareTo(BigDecimal.ZERO) < 0) {

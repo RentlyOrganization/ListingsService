@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import rental.rentallistingservice.DTO.UserDTO;
 import rental.rentallistingservice.Exceptions.*;
+import rental.rentallistingservice.Services.ApartmentService;
 import rental.rentallistingservice.Services.UserWatchListService;
 import rental.rentallistingservice.microservices.UserOwner;
 
@@ -23,11 +24,13 @@ public class UserWatchlistController {
 
     private final UserWatchListService userWatchlistService;
     private final UserOwner userOwner;
+    private final ApartmentService apartmentService;
 
     @Autowired
-    public UserWatchlistController(UserOwner userOwner, UserWatchListService userWatchlistService) {
+    public UserWatchlistController(ApartmentService apartmentService, UserOwner userOwner, UserWatchListService userWatchlistService) {
         this.userWatchlistService = userWatchlistService;
         this.userOwner = userOwner;
+        this.apartmentService = apartmentService;
     }
 
     @Operation(summary = "Pobierz listę obserwowanych",
@@ -100,9 +103,11 @@ public class UserWatchlistController {
     }
 
     private void validateApartmentId(Long apartmentId) {
-        if (apartmentId <= 0) {
+        if (apartmentId == null || apartmentId <= 0) {
             throw new InvalidApartmentIdException("ID mieszkania musi być dodatnie");
         }
+
+        apartmentService.getApartmentById(apartmentId);
     }
 
     private void validateUserExists(Long userId) {

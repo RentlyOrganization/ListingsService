@@ -2,29 +2,25 @@ package rental.rentallistingservice.DTO;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
-import lombok.*;
+import lombok.Data;
 
 import java.math.BigDecimal;
 
 @Data
-@Schema(description = "DTO do tworzenia nowego mieszkania")
-public class CreateApartmentDTO {
-    @NotNull(message = "Cena jest wymagana")
-    @DecimalMin(value = "0", message = "Cena nie może być ujemna")
-    private BigDecimal Price;
+@Schema(description = "DTO dla aktualizacji danych mieszkania")
+public class UpdateApartmentDTO {
+    @DecimalMin(value = "0.0", inclusive = false, message = "Cena musi być większa od 0")
+    private BigDecimal price;
 
     @NotBlank(message = "Lokalizacja jest wymagana")
     private String location;
 
-    @NotNull(message = "Liczba pokoi jest wymagana")
-    @Min(value = 1, message = "Liczba pokoi musi być większa od zera")
-    private Integer Rooms;
+    @Positive(message = "Liczba pokoi musi być większa od zera")
+    private Integer rooms;
 
-    @NotNull(message = "Typ najmu jest wymagany")
     @Pattern(regexp = "SHORT_TERM|LONG_TERM|DAILY", message = "Nieprawidłowy typ najmu")
     private String rentalType;
 
-    @NotNull(message = "Status dostępności jest wymagany")
     private Boolean available;
 
     @DecimalMin(value = "-90", message = "Szerokość geograficzna musi być większa lub równa -90")
@@ -35,7 +31,6 @@ public class CreateApartmentDTO {
     @DecimalMax(value = "180", message = "Długość geograficzna musi być mniejsza lub równa 180")
     private Double longitude;
 
-    @NotNull(message = "Id właściciela jest wymagane")
-    @Schema(description = "Id właściciela mieszkania")
+    @Positive(message = "OwnerId musi być większy od zera")
     private Long ownerId;
 }
