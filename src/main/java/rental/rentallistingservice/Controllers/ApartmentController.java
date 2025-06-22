@@ -154,12 +154,70 @@ public class ApartmentController {
         if (id == null || id <= 0) {
             throw new InvalidParameterException("ID mieszkania musi być większe od zera");
         }
+
+        Apartment apartment = apartmentService.incrementViewCount(id);
+
+
+        return ResponseEntity.ok(mapToResponseDTOWithOwner(apartment));
+    }
+
+    @Operation(summary = "Dodaj ocenę mieszkania",
+              description = "Dodaje nową ocenę do mieszkania i aktualizuje średnią")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pomyślnie dodano ocenę"),
+            @ApiResponse(responseCode = "400", description = "Nieprawidłowa ocena"),
+            @ApiResponse(responseCode = "404", description = "Nie znaleziono mieszkania"),
+            @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
+    })
+    @PostMapping("/{id}/rating")
+    public ResponseEntity<ApartmentResponseDTO> addRating(
+            @Parameter(description = "ID mieszkania") @PathVariable Long id,
+            @Parameter(description = "Ocena (1-5)") @RequestParam BigDecimal rating) {
+
+        if (id == null || id <= 0) {
+            throw new InvalidParameterException("ID mieszkania musi być większe od zera");
+        }
+
+        if (rating == null || rating.compareTo(BigDecimal.valueOf(1)) < 0 || rating.compareTo(BigDecimal.valueOf(5)) > 0) {
+            throw new InvalidParameterException("Ocena musi być w zakresie od 1 do 5");
+        }
+
+        Apartment updatedApartment = apartmentService.addRating(id, rating);
+        return ResponseEntity.ok(mapToResponseDTOWithOwner(updatedApartment));
+    }
+
+    @Operation(summary = "Pobierz statystyki mieszkania",
+            description = "Zwraca statystyki mieszkania (średnia ocena, liczba ocen, liczba wyświetleń)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pomyślnie pobrano statystyki"),
+            @ApiResponse(responseCode = "404", description = "Nie znaleziono mieszkania"),
+            @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
+    })
+    @GetMapping("/{id}/stats")
+    public ResponseEntity<Map<String, Object>> getApartmentStats(
+            @Parameter(description = "ID mieszkania") @PathVariable Long id) {
+
+        if (id == null || id <= 0) {
+            throw new InvalidParameterException("ID mieszkania musi być większe od zera");
+        }
+
         Apartment apartment = apartmentService.getAll().stream()
                 .filter(a -> a.getId().equals(id))
                 .findFirst()
                 .orElseThrow(() -> new ApartmentNotFoundException("Mieszkanie o ID " + id + " nie zostało znalezione"));
-        return ResponseEntity.ok(apartmentMapper.toResponseDTO(apartment));
+
+        Map<String, Object> stats = Map.of(
+                "apartmentId", apartment.getId(),
+                "averageRating", apartment.getAverageRating(),
+                "ratingCount", apartment.getRatingCount(),
+                "viewCount", apartment.getViewCount(),
+                "totalRating", apartment.getTotalRating()
+        );
+
+        return ResponseEntity.ok(stats);
     }
+
+
 
     private void validateOwner(Long ownerId) {
         try {

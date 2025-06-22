@@ -2,10 +2,12 @@ package rental.rentallistingservice.Services;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import rental.rentallistingservice.Exceptions.ApartmentNotFoundException;
 import rental.rentallistingservice.Model.Apartment;
 import rental.rentallistingservice.Repositories.ApartmentRepository;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,5 +47,26 @@ public class ApartmentService {
                 .filter(a -> available == null || a.isAvailable() == available)
                 .collect(Collectors.toList());
     }
+
+    public Apartment addRating(Long apartmentId, BigDecimal rating) {
+        Apartment apartment = apartmentRepository.findById(apartmentId)
+                .orElseThrow(() -> new RuntimeException("Apartment not found"));
+
+        apartment.setTotalRating(apartment.getTotalRating().add(rating));
+
+        apartment.setRatingCount(apartment.getRatingCount() + 1);
+
+        return apartmentRepository.save(apartment);
+    }
+
+    public Apartment incrementViewCount(Long apartmentId) {
+        Apartment apartment = apartmentRepository.findById(apartmentId)
+                .orElseThrow(() -> new ApartmentNotFoundException("Mieszkanie o ID " + apartmentId + " nie zostało znalezione"));
+
+        apartment.setViewCount(apartment.getViewCount() + 1);
+        return apartmentRepository.save(apartment);
+    }
+
+
 
 }

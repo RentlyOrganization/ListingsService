@@ -12,5 +12,6 @@ public interface ApartmentMapper {
     CreateApartmentDTO toDto(Apartment apartment);
     @Mapping(target = "ownerId", source = "ownerId")
     @Mapping(target = "ownerName", ignore = true)
+    @Mapping(target = "averageRating", source = "averageRating")
     ApartmentResponseDTO toResponseDTO(Apartment entity);
 }

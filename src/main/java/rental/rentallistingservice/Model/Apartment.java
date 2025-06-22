@@ -37,5 +37,16 @@ public class Apartment {
     private boolean available;
     @Column(name = "owner_id")
     private Long ownerId;
+    @Column(name = "total_rating")
+    private BigDecimal totalRating = BigDecimal.ZERO;
+    private Long viewCount = 0L;
+    @Column(name = "rating_count")
+    private Integer ratingCount = 0;
 
+    public BigDecimal getAverageRating() {
+        if (ratingCount == 0) {
+            return BigDecimal.ZERO;
+        }
+        return totalRating.divide(BigDecimal.valueOf(ratingCount), BigDecimal.ROUND_HALF_UP);
+    }
 }
