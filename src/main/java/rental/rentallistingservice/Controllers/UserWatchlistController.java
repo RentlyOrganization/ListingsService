@@ -6,16 +6,21 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import rental.rentallistingservice.DTO.ApartmentResponseDTO;
 import rental.rentallistingservice.DTO.UserDTO;
 import rental.rentallistingservice.Exceptions.*;
+import rental.rentallistingservice.Mapper.ApartmentMapper;
+import rental.rentallistingservice.Model.Apartment;
 import rental.rentallistingservice.Services.ApartmentService;
 import rental.rentallistingservice.Services.UserWatchListService;
 import rental.rentallistingservice.microservices.UserOwner;
 
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/api/watchlist")
@@ -25,12 +30,15 @@ public class UserWatchlistController {
     private final UserWatchListService userWatchlistService;
     private final UserOwner userOwner;
     private final ApartmentService apartmentService;
+    private final ApartmentMapper apartmentMapper;
+
 
     @Autowired
-    public UserWatchlistController(ApartmentService apartmentService, UserOwner userOwner, UserWatchListService userWatchlistService) {
+    public UserWatchlistController(ApartmentMapper apartmentMapper, ApartmentService apartmentService, UserOwner userOwner, UserWatchListService userWatchlistService) {
         this.userWatchlistService = userWatchlistService;
         this.userOwner = userOwner;
         this.apartmentService = apartmentService;
+        this.apartmentMapper = apartmentMapper;
     }
 
     @Operation(summary = "Pobierz listę obserwowanych",
@@ -57,14 +65,15 @@ public class UserWatchlistController {
             @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
     })
     @PostMapping("/{apartmentId}")
-    public ResponseEntity<Void> addToWatchlist(
+    public ResponseEntity<Map<String, Object>> addToWatchlist(
             @Parameter(description = "ID mieszkania") @PathVariable Long apartmentId,
             @Parameter(description = "ID użytkownika") @RequestParam Long userId) {
         userWatchlistService.addToWatchlist(userId, apartmentId);
         validateApartmentId(apartmentId);
         validateUserId(userId);
         validateUserExists(userId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Dodano do obserwowanych",
+                "apartmentId", apartmentId));
     }
 
     @Operation(summary = "Usuń z obserwowanych",
@@ -102,6 +111,26 @@ public class UserWatchlistController {
         return ResponseEntity.ok(userWatchlistService.isWatched(userId, apartmentId));
     }
 
+    @Operation(summary = "Pobierz szczegóły obserwowanych mieszkań",
+            description = "Zwraca szczegóły mieszkań obserwowanych przez użytkownika")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pomyślnie pobrano szczegóły mieszkań"),
+            @ApiResponse(responseCode = "404", description = "Nie znaleziono użytkownika"),
+            @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
+    })
+    @GetMapping("/info")
+    public ResponseEntity<List<ApartmentResponseDTO>> getWatchedApartmentDetails(
+            @Parameter(description = "ID użytkownika") @RequestParam Long userId) {
+        validateUserId(userId);
+        validateUserExists(userId);
+        List<Long> ids = userWatchlistService.getWatchedApartmentIds(userId);
+        List<ApartmentResponseDTO> apartments = ids.stream()
+                .map(apartmentService::getApartmentById)
+                .map(this::mapToDTO)
+                .toList();
+        return ResponseEntity.ok(apartments);
+    }
+
     private void validateApartmentId(Long apartmentId) {
         if (apartmentId == null || apartmentId <= 0) {
             throw new InvalidApartmentIdException("ID mieszkania musi być dodatnie");
@@ -132,5 +161,22 @@ public class UserWatchlistController {
         if (userId <= 0) {
             throw new InvalidUserIdException("ID użytkownika musi być dodatnie");
         }
+    }
+
+    private ApartmentResponseDTO mapToDTO(Apartment apartment) {
+        ApartmentResponseDTO dto = apartmentMapper.toResponseDTO(apartment);
+
+        try {
+            UserDTO user = userOwner.getUserById(apartment.getOwnerId());
+            if (user != null) {
+                dto.setOwnerName(user.getFirstName());
+            } else {
+                dto.setOwnerName("Nieznany");
+            }
+        } catch (Exception e) {
+            dto.setOwnerName("Nieznany");
+        }
+
+        return dto;
     }
 }
