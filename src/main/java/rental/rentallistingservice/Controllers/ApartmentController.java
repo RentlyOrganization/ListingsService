@@ -88,6 +88,7 @@ public class ApartmentController {
     })
     @GetMapping
     public ResponseEntity<List<ApartmentResponseDTO>> getAllApartments(
+            @Parameter(hidden = true)
             @RequestParam Map<String, String> allParams
     ) {
         if (!allParams.isEmpty()) {
@@ -219,9 +220,32 @@ public class ApartmentController {
         return ResponseEntity.ok(stats);
     }
 
+    @Operation(summary = "Top 10 najpopularniejszych mieszkań",
+            description = "Zwraca listę 10 mieszkań z największą liczbą wyświetleń")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pomyślnie pobrano listę mieszkań"),
+            @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
+    })
+    @GetMapping("/popular")
+    public ResponseEntity<List<ApartmentResponseDTO>> getTopPopularApartments() {
+        List<Apartment> popularApartments = apartmentService.getTopPopularApartments(10);
+        List<ApartmentResponseDTO> dtos = popularApartments.stream()
+                .map(this::mapToResponseDTOWithOwner)
+                .toList();
+        return ResponseEntity.ok(dtos);
+    }
+
+    @Operation(summary = "Aktualizuj mieszkanie",
+            description = "Aktualizuje dane mieszkania o podanym ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pomyślnie zaktualizowano mieszkanie"),
+            @ApiResponse(responseCode = "400", description = "Nieprawidłowe dane aktualizacji"),
+            @ApiResponse(responseCode = "404", description = "Nie znaleziono mieszkania"),
+            @ApiResponse(responseCode = "500", description = "Wewnętrzny błąd serwera")
+    })
     @PatchMapping("/{id}")
     public ResponseEntity<ApartmentResponseDTO> updateApartment(
-            @PathVariable Long id,
+            @Parameter(description = "ID mieszkania") @PathVariable Long id,
             @RequestBody UpdateApartmentDTO updateDto
     ) {
         if (id == null || id <= 0) {

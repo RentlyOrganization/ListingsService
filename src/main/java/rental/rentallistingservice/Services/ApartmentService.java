@@ -8,6 +8,7 @@ import rental.rentallistingservice.Repositories.ApartmentRepository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -71,5 +72,13 @@ public class ApartmentService {
         return apartmentRepository.findById(apartmentId)
                 .orElseThrow(() -> new ApartmentNotFoundException("Mieszkanie o ID " + apartmentId + " nie zostało znalezione"));
     }
+
+    public List<Apartment> getTopPopularApartments(int limit) {
+        return apartmentRepository.findAll().stream()
+                .sorted(Comparator.comparing(Apartment::getViewCount, Comparator.reverseOrder()))
+                .limit(limit)
+                .toList();
+    }
+
 
 }
